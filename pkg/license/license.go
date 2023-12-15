@@ -22,6 +22,8 @@ type LicenseManager interface {
 	Import(string) error
 	GenerateLicense(string, int) (string, error)
 	ValidateLicense(string) (bool, error)
+	ParseLicense(string) (string, int, error)
+	LifeTime() (string, error)
 }
 
 type LicenseMgr struct {
@@ -94,7 +96,7 @@ func (mgr *LicenseMgr) GenerateLicense(dmiCode string, day int) (string, error) 
 	return hex.EncodeToString(lic), nil
 }
 
-func (mgr *LicenseMgr) parseLicense(licStr string) (string, int, error) {
+func (mgr *LicenseMgr) ParseLicense(licStr string) (string, int, error) {
 	licBytes, err := hex.DecodeString(licStr)
 	if err != nil {
 		return "", -1, err
@@ -119,7 +121,7 @@ func (mgr *LicenseMgr) parseLicense(licStr string) (string, int, error) {
 }
 
 func (mgr *LicenseMgr) ValidateLicense(licStr string) (bool, error) {
-	licDmiCode, deadline, err := mgr.parseLicense(licStr)
+	licDmiCode, deadline, err := mgr.ParseLicense(licStr)
 	if err != nil {
 		return false, err
 	}
@@ -138,4 +140,21 @@ func (mgr *LicenseMgr) ValidateLicense(licStr string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (mgr *LicenseMgr) LifeTime() (string, error) {
+	filename := path.Join(mgr.LicenseDir, LICENSEFILE)
+
+	lic, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+
+	_, life, err := mgr.ParseLicense(string(lic))
+	if err != nil {
+		return "", err
+	}
+
+	lifeTime := time.Unix(int64(life), 0)
+	return lifeTime.Format("2006-01-02"), nil
 }
